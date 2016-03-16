@@ -1,0 +1,22 @@
+{% include "copyright" %}
+{% include "generation_details" %}
+using System;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Storage.Streams;
+
+namespace {%= o.meta.getNamespace() %}
+{
+    public class BatteryLevelParser : BleValueParser<byte, byte>
+    {
+        protected override byte ParseReadValue(IBuffer raw)
+        {
+            byte result = (byte)raw.AsStream().ReadByte();
+            return result;
+        }
+
+        protected override IBuffer ParseWriteValue(byte data)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}

@@ -1,0 +1,24 @@
+   namespace {%= o.meta.getNamespace() %}:
+      [Ble{%= Utils.convertStringIntoProperCsharpName(o.model.ProfileName) %} class]:
+       |        -> var res = await Ble{%= Utils.convertStringIntoProperCsharpName(o.model.ProfileName) %}.FirstOrDefault(); // first device of this type (or null)
+       |        -> var res = await Ble{%= Utils.convertStringIntoProperCsharpName(o.model.ProfileName) %}.FindAll(); // all devices of this type (list; could be empty)
+       |       
+{% {var i = 0; for(;i < o.model.Services.length; ++i) {
+    var service = o.model.Services[i];
+    var serviceName = Utils.convertStringIntoProperCsharpName(service.Name);
+    var servChar = i === (o.model.Services.length - 1) ? " " : "|";
+    var servPropChar = service.Characteristics.length > 0 ? "|" : " ";
+%}       +---+ .{%= serviceName + " property [ of Ble" + serviceName %}Service type]:
+       {%=servChar%}   {%=servPropChar%}    .Name [string] = "{%= service.Name %}"
+       {%=servChar%}   {%=servPropChar%}    .UUID [string] = "{%= service.UUID %}"
+       {%=servChar%}   {%=servPropChar%}    .IsMandatory [bool] = {%= service.Requirement == "Mandatory" %}
+{% { var k = 0; for(;k < service.Characteristics.length; ++k) {
+    var char = service.Characteristics[k];
+    var charName = Utils.convertStringIntoProperCsharpName(char.Name);
+    var propChar = k === (service.Characteristics.length - 1) ? " " : "|";
+%}       {%=servChar%}   +--- .{%= charName %} property [of BleCharacteristic type]:
+       {%=servChar%}   {%=propChar%}        .Name [string] = "{%= char.Name %}"
+       {%=servChar%}   {%=propChar%}        .UUID [string] = "{%= char.UUID %}"
+       {%=servChar%}   {%=propChar%}        .IsMandatory [bool] = {%= char.Requirement == "Mandatory" %}
+       {%=servChar%}   {%=propChar%}        ...
+{% }} %}{% }} %}

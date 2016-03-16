@@ -1,0 +1,6 @@
+Plugin: {%= o.meta.getName() %}
+    Plugin Description: {%= o.meta.getDescription() %}
+Authors: {%= o.meta.getAuthor() %}
+Plugin Version: {%= o.meta.getVersionDescription() %}
+Plugin Release Date: {%= o.meta.getPluginReleaseDate().toSimpleDate() %}
+Source Code Generation Date: {%= o.meta.getGenerationDate().toSimpleDateWithTime() %}

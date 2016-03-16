@@ -1,0 +1,94 @@
+{% include "copyright" %}
+{% include "generation_details" %}{%
+    var loc = {};
+    loc.Name = "Ble" + Utils.convertStringIntoProperCsharpName(o.model.ProfileName);
+    loc.RequiredUUIDs = "";
+    loc.Services = new Array();
+    for(var x = 0; x < o.model.Services.length; x++) {
+      var service = o.model.Services[x];
+      var fieldName = Utils.convertStringIntoProperCsharpName(service.Name);
+      var typeName = "Ble" + fieldName + "Service";
+      loc.Services.push({name: fieldName, type: typeName});
+      if (service.Requirement === ServiceRequirementEnum.Mandatory) {
+        if (loc.RequiredUUIDs.length > 0) loc.RequiredUUIDs += ", "
+        loc.RequiredUUIDs = loc.RequiredUUIDs + "\"" + service.UUID + "\"";
+      }
+    }
+%}
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using Windows.Devices.Enumeration;
+
+namespace {%= o.meta.getNamespace() %}
+{
+    public class {%= loc.Name %} : BleDevice
+    {
+        private static readonly string[] RequiredServices = new string[] { {%# loc.RequiredUUIDs %} };
+        {% for (var x = 0; x < loc.Services.length; ++x) { var service = loc.Services[x]; %}public {%= service.type %}  {%= service.name %} { get; set; } = new {%= service.type %}();
+        {% } %}
+
+        /// <summary>
+        /// Search and returns all Bluetooth Smart devices matching {%= loc.Name %} profile
+        /// </summary>
+        /// <returns>List<{%= loc.Name %}> list with all devices matching our device; empty list if there is no device matching</returns>
+        public static async Task<List<{%= loc.Name %}>> FindAll()
+        {
+            List<{%= loc.Name %}> result = new List<{%= loc.Name %}>();
+            // get all BT LE devices
+            var all = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(BluetoothLEDevice.GetDeviceSelector());
+            GattDeviceService service = null;
+            BluetoothLEDevice leDevice = null;
+
+            foreach (var device in all)
+            {
+                try
+                {
+                    leDevice = await BluetoothLEDevice.FromIdAsync(device.Id);
+                }
+                catch (Exception e)
+                {
+                    leDevice = null;
+                }
+
+                if (leDevice == null)
+                    continue;
+
+                bool matches = true;
+                foreach (var requiredService in RequiredServices)
+                {
+                    matches = CheckForCompatibility(leDevice, requiredService.ToGuid());
+                    if (!matches)
+                        break;
+                }
+
+                if (!matches)
+                    continue;
+
+                var toAdd = new {%= loc.Name %}(device, leDevice);
+                toAdd.Initialize();
+                result.Add(toAdd);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Search and returns first Bluetooth Smart device matching {%= loc.Name %} profile
+        /// </summary>
+        /// <returns>first {%= loc.Name %} device; null if there is no device matching</returns>
+        public static async Task<{%= loc.Name %}> FirstOrDefault()
+        {
+            var all = await FindAll();
+            return all.FirstOrDefault();
+        }
+
+        private {%= loc.Name %}(DeviceInformation device, BluetoothLEDevice leDevice) : base(device, leDevice)
+        {   {% for (var x = 0; x < loc.Services.length; ++x) { var service = loc.Services[x]; %}
+            RegisterNewService({%= service.name %}); {% } %}
+        }
+    }
+}

@@ -1,0 +1,90 @@
+{% include "generation_details" %}
+{% include "readme_header" %}
+
+1. How to include and start using the code
+
+- Copy all output files and directories into your project directory (preferably into a new sub-folder)
+- Import all those files into your project
+- All generated classes are in {%= o.meta.getNamespace() %} namespace and you can start using them immediately
+    - You can change that namespace by setting the NAMESPACE property of your BDS project, before generating the code
+    - Be aware that the final C# namespace always ends with additional suffix: "{%= o.meta.getNamespaceSuffix() %}"
+
+2. How to use the code
+
+- You can start using the Ble{%= Utils.convertStringIntoProperCsharpName(o.model.ProfileName) %} class right away, and connect with a dedicated device, by calling one of:
+    - var device  = await Ble{%= Utils.convertStringIntoProperCsharpName(o.model.ProfileName) %}.FirstOrDefault(); -> one device or null
+    - var devices = await Ble{%= Utils.convertStringIntoProperCsharpName(o.model.ProfileName) %}.FindAll();        -> list of all found devices (could be empty)
+- Be aware that after finding a device, the system initiates the process of connecting to it, but the device can still be disconnected when you receive a reply from FirstOrDefault()/FindAll() function. You should monitor the state of connection:
+    - device.DeviceConnectionStatusChanged += ConnectionStatusChangedCallback;
+        where ConnectionStatusChangedCallback is a function:
+    - public async void ConnectionStatusChangedCallback(object device, BleDeviceConnectionStatusChangedEventArgs args) { ...
+- Wait for any further action until you are sure that the device is connected. You can check that state inside the above callback:
+    - bool connected = (args.ConnectionStatus == BluetoothConnectionStatus.Connected);
+- If you want to read some characteristic's value, you need to traverse full path (device -> service -> characteristic) and call ReadAsync():
+    - var reply = await device.DeviceInformation.HardwareRevisionString.ReadAsync();
+    - reply is of type GattReadResult, and you can get underlying value (in form of IBuffer):
+        IBuffer buffer = reply.Value;
+    - before getting the value from the result, check if read operation was successful by calling:
+         if (reply.Status == GattCommunicationStatus.Success) { /* instruction to get and process the value */ }
+- Unfortunately every characteristic has its own format and fields, so you need to process IBuffer on your own and extract particular values. There is a helper abstract class for that though - BleValueParser<TRead, TWrite>
+    - by subclassing it and implementing one or both of the functions:
+        protected abstract TRead ParseReadValue(IBuffer raw);
+        protected abstract IBuffer ParseWriteValue(TWrite data);
+      you can easily add high-level support for your characteristic with a few lines of code.
+    - TRead defines what the output type of the characteristic is while reading from it
+    - TWrite defines what type should be used when we want to write the characteristic
+        - in most cases TRead and TWrite will be the same type, but a split was done, so it is more flexible and can handle more complex scenarios
+    - you can find and check how it is working, by looking into one example we provided to you already, which is HeartRateMeasurementParser inside Parsers subdirectory (if you are working with some other device, you can easily delete that single file). You can find official documentation for that characteristic here [https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml]
+        - it supports only reading from the characteristic, but it should give you an idea of that class
+    - similarly to the above example, you can add support for other characteristics
+    - ValueParsers are separated from the device/characteristic by default. After creating one, you need to assign it to the particular characteristic:
+        HeartRateMeasurementParser HrParser = new HeartRateMeasurementParser();
+        HrParser.ConnectWithCharacteristic(device.HeartRate.HeartRateMeasurement);
+    - now you can easily get the measurement by calling (note that Heart Rate Measurement characteristic doesn't support reading, so below code will not work in practice, but it gives you the overview how parsers can be helpful for you):
+        short heartRate = await HrParser.Read();
+- One of the most common operations is enabling Notification from characteristic which supports that operation. To do that just set a listener for notifications (example for hear rate belts):
+    - device.HeartRate.HeartRateMeasurement.ValueChanged += HeartRateMeasurementOnValueChanged;
+        where
+    - private void HeartRateMeasurementOnValueChanged(object sender, ValueChangedEventArgs args) { ... }
+    - args.Value is an IBuffer with data, which you need to process further
+- and then enable notification for particular characteristic:
+    - await device.HeartRate.HeartRateMeasurement.EnableNotifications();
+- However, if you decide to implement and use BleValueParser, the above could be easier and look like that:
+    - HrParser.ValueChanged += HrParserOnValueChanged;
+        where
+    - private async void HrParserOnValueChanged(object device, ValueChangedEventArgs<short> arg) { ... }
+    - arg.Value will be of type short and will contain heart rate measurement directly available to your code
+- with above parser you can enable the notification as before, by calling original characteristic's EnableNotification(), or use a shortcut for it:
+    - await HrParser.EnableNotifications();
+    
+3. Additional notes
+    - you can easily modify and reuse the generated code, just remember the license we are using (MIT)
+    - after you modify the code, it could be good to make a diff from the original - in case you would need to regenerate the code, you would have a "template" for getting your changes back into the new code
+    - all classes generated are derived from BleBase - adding some functionality there and you are able to get it in all places
+    - in some cases, generated code may not be compilable or working properly - that is possible if names in the Bluetooth Developer Studio were not set properly:
+        - the same name for many services/characteristics
+        - missing string with the name
+        - etc.
+    - in above cases, the preferable solution is to go and modify the BDS project to contain proper names, and then re-generate the code
+    - in Parsers subdirectory you can find another two examples for parsers:
+        - BatteryLevelParser which allows you to easily get battery level from Battery Level characteristic [https://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.battery_level.xml]
+        - StringParser which allows to easily get value from characteristic containing single string (like device name, manufacturer etc)
+        - StringParser adds also extension methods to every BleCharacteristic:
+            - string val = await MyCharacteristic.ReadAsString() //(UTF8 encoding will be used)
+            - string val = await MyCharacteristic.ReadAsUnicodeString() //(UTF16 encoding will be used)
+            - GattCommunicationStatus status = MyCharacteristic.WriteAsString(string value) //(UTF8 encoding will be used)
+            - GattCommunicationStatus status = MyCharacteristic.WriteAsUnicodeString(string value) //(UTF16 encoding will be used)
+            - be aware that calling those methods on any non-string characteristic will most probably crash your application
+
+4. Your generated class structure/model:
+
+   Below you can find a very brief explanation of what classes were created for you and the model for your device:
+
+{% include "code_model" %}
+
+5. References
+
+- Bluetooth (R) Developer Studio [https://www.bluetooth.com/~/media/developer-studio/index]
+- BDS Development Story [http://matchboxmobile.com/projects/bluetooth-developer-studio/]
+- Plugin Development story [http://matchboxmobile.com/blog/bds-plugin-dev/]
+- Matchbox Mobile Ltd. [http://matchboxmobile.com]

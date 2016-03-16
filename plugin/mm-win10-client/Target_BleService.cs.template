@@ -1,0 +1,27 @@
+{% include "copyright" %}
+{% include "generation_details" %}
+{%
+    var loc = {};
+    loc.TypeName = "Ble" + Utils.convertStringIntoProperCsharpName(o.model.Name) + "Service";
+    loc.Name = o.model.Name;
+    loc.UUID = "\"" + o.model.UUID + "\"";
+    loc.Required = (o.model.Requirement === ServiceRequirementEnum.Mandatory) ? "true" : "false";
+    loc.Characteristics = o.model.Characteristics;
+%}
+
+namespace {%= o.meta.getNamespace() %}
+{
+    public class {%= loc.TypeName %} : BleService
+    {{% for(var i = 0; i < loc.Characteristics.length; i++) { var ch = loc.Characteristics[i]; %}
+        /// <summary>
+        /// {%= ch.Name %} characteristic.
+        /// </summary>
+        public BleCharacteristic {%= Utils.convertStringIntoProperCsharpName(ch.Name) %} { get; set; } = new BleCharacteristic("{%= ch.Name %}", "{%= ch.UUID %}", {%= ch.Requirement === CharacteristicRequirementEnum.Mandatory %});  
+        {% } %}
+        private const bool IsServiceMandatory = {%= loc.Required %};
+
+        public {%= loc.TypeName %}() : base({%# loc.UUID %}, IsServiceMandatory)
+        {
+        }
+    }
+}

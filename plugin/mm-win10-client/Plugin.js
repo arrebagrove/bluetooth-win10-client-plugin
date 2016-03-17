@@ -72,7 +72,7 @@ function Metadata() {
     this.includeDefaultServices = false;
     this.currentDate = new Date();
     this.releaseDate = new Date(Date.UTC(2016, 2, 16)); // months are 0-indexed!
-    this.link = "http://matchboxmobile.com/blog/bds-plugin-dev";
+    this.link = "https://github.com/matchboxmobile/bluetooth-win10-client-plugin";
     this.contactEmail = "info@matchboxmobile.com";
     this.copyrightYears = "2016";
     this.namespace = "ble.wrappers";

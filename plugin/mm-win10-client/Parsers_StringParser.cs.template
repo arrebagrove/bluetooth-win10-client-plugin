@@ -18,34 +18,26 @@ namespace {%= o.meta.getNamespace() %}
 
         protected override string ParseReadValue(IBuffer raw)
         {
-            var result = string.Empty;
-
             if (StringFormat == GattPresentationFormatTypes.Utf8)
             {
-                result = Encoding.UTF8.GetString(raw.ToArray());
+                return Encoding.UTF8.GetString(raw.ToArray());
             }
-            else if (StringFormat == GattPresentationFormatTypes.Utf16)
+            else
             {
-                result = Encoding.Unicode.GetString(raw.ToArray());
+                return Encoding.Unicode.GetString(raw.ToArray());
             }
-
-            return result;
         }
 
         protected override IBuffer ParseWriteValue(string data)
         {
-            IBuffer result = null;
-
             if (StringFormat == GattPresentationFormatTypes.Utf8)
             {
-                result = Encoding.UTF8.GetBytes(data).AsBuffer();
+                return Encoding.UTF8.GetBytes(data).AsBuffer();
             }
-            else if (StringFormat == GattPresentationFormatTypes.Utf16)
+            else
             {
-                result = Encoding.Unicode.GetBytes(data).AsBuffer();
+                return Encoding.Unicode.GetBytes(data).AsBuffer();
             }
-
-            return result;
         }
 
         public static string Convert(IBuffer input, byte format)

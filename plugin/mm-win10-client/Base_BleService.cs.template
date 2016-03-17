@@ -32,7 +32,7 @@ namespace {%= o.meta.getNamespace() %}
         /// <summary>
         /// Returns underlying GattDeviceService object (from standard Windows 10 SDK)
         /// </summary>
-        public GattDeviceService DeviceService { get; private set; } = null;
+        public GattDeviceService DeviceService { get; private set; }
         
         /// <summary>
         /// Tells if given service is available (it will be false if the device doesn't implement

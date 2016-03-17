@@ -151,7 +151,7 @@ namespace HRMonitor
 
             // update also battery
             byte battery = await BatteryParser.Read();
-            TxtBattery.Text = String.Format("battery level: {0}%", battery);
+            TxtBattery.Text = $"battery level: {battery}%";
         }
 
         [Conditional("DEBUG")]

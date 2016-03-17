@@ -13,7 +13,7 @@ namespace {%= o.meta.getNamespace() %}
     }
 
     /// <summary>
-    /// Add simple helper method to convert any string represetnation of GUID
+    /// Add simple helper method to convert any string representation of GUID
     /// into real Guid object in C#.
     /// </summary>
     public static class GuidExtensionForString
